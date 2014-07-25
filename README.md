@@ -3,6 +3,8 @@ kw-make-struct
 
 like make from unstable/struct except allowing keywords
 
+[![Build Status](https://travis-ci.org/AlexKnauth/kw-make-struct.png?branch=master)](https://travis-ci.org/AlexKnauth/kw-make-struct)
+
 Examples:
 ```racket
 > (struct foo (a b c) #:transparent)
