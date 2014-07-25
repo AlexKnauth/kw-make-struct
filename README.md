@@ -1,7 +1,7 @@
 kw-make-struct
 ==============
 
-like [make](http://docs.racket-lang.org/unstable/struct.html?#%28form._%28%28lib._unstable%2Fstruct..rkt%29._make%29%29) from unstable/struct except allowing keywords
+like [make](http://docs.racket-lang.org/unstable/struct.html#%28form._%28%28lib._unstable%2Fstruct..rkt%29._make%29%29) from unstable/struct except allowing keywords
 
 [![Build Status](https://travis-ci.org/AlexKnauth/kw-make-struct.png?branch=master)](https://travis-ci.org/AlexKnauth/kw-make-struct)
 
