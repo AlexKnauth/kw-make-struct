@@ -2,5 +2,5 @@
 
 (define collection 'multi)
 
-(define deps '("base" "rackjure" "rackunit-lib"))
+(define deps '("base" "rackjure" "generic-bind" "rackunit-lib"))
 

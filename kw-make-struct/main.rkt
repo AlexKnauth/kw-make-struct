@@ -1,6 +1,8 @@
 #lang racket/base
 (require (except-in unstable/struct make)
-         (for-syntax racket/base
+         racket/require
+         (for-syntax (subtract-in racket/base generic-bind/as-rkt-names)
+                     generic-bind/as-rkt-names
                      racket/list
                      racket/local
                      rackjure/threading
@@ -71,13 +73,11 @@
        (define pos-args
          (syntax->list #'(pos-arg ...)))
        (define kw-args
-         (make-immutable-hash
-          (for/list ([term (in-list (syntax->list #'([kw . kw-arg] ...)))])
-            (with-syntax ([(kw . kw-arg) term])
-              (define field (~> #'kw syntax-e keyword->string string->symbol))
-              (unless (member field fields)
-                (raise-syntax-error #f "unexpected field keyword" stx #'kw))
-              (cons field (syntax-property #'kw-arg 'field field))))))
+         (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
+           (define field (~> #'kw syntax-e keyword->string string->symbol))
+           (unless (member field fields)
+             (raise-syntax-error #f "unexpected field keyword" stx #'kw))
+           (values field (syntax-property #'kw-arg 'field field))))
        
        (define-values (bkwds-exprs _ __)
          (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:kw-args kw-args)
@@ -89,7 +89,8 @@
                                                          bkwds-exprs)
                                      #:pos-args pos-args
                                      #:kw-args (hash-remove kw-args field))]
-                   [(empty? pos-args) (error 'make/kw "missing an argument for the field: ~a" field)]
+                   [(empty? pos-args) (raise-syntax-error
+                                       #f (format "missing an argument for the field: ~a" field) stx)]
                    [else (vals #:bkwds-exprs (cons (syntax-property (first pos-args) 'field field)
                                                    bkwds-exprs)
                                #:pos-args (rest pos-args)
