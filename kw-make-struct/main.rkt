@@ -18,6 +18,9 @@
               (~or pos-arg:expr
                    (~seq kw:keyword kw-arg:expr))
               ...)
+     #:fail-when (check-duplicate-keyword
+                  (syntax->list #'(kw ...)))
+                 "duplicate field keyword"
      (let ()
        (define info (get-struct-info #'S stx))
        (define constructor (list-ref info 1))
@@ -110,6 +113,18 @@
   (define (display-exn exn)
     (define display-handler (error-display-handler))
     (display-handler (exn-message exn) exn))
+  (define (check-duplicate-keyword kws)
+    (maybe-identifier->keyword
+     (check-duplicate-identifier
+      (map keyword->identifier kws))))
+  (define (keyword->identifier kw)
+    (define sym (~> kw syntax-e keyword->string string->symbol))
+    (datum->syntax kw sym kw kw))
+  (define (maybe-identifier->keyword id)
+    (if id
+        (let ([kw (~> id syntax-e symbol->string string->keyword)])
+          (datum->syntax id kw id id))
+        #f))
   )
 
 
