@@ -5,6 +5,8 @@ like [make](http://docs.racket-lang.org/unstable/struct.html#%28form._%28%28lib.
 
 [![Build Status](https://travis-ci.org/AlexKnauth/kw-make-struct.png?branch=master)](https://travis-ci.org/AlexKnauth/kw-make-struct)
 
+`make/kw` is also defined as a match-expander.
+
 Examples:
 ```racket
 > (struct foo (a b c) #:transparent)
@@ -16,4 +18,8 @@ Examples:
 (foo 'a 'b 'c)
 > (make/kw foo #:c 'c 'a #:b 'b)
 (foo 'a 'b 'c)
+> (match (foo 'a 'b 'c)
+    [(make/kw foo #:a a #:b b #:c c)
+     (list a b c)])
+'(a b c)
 ```
