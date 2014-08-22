@@ -3,6 +3,7 @@
 @(require scribble/eval)
 
 @(require (for-label racket/base
+                     racket/match
                      unstable/struct
                      kw-make-struct))
 
