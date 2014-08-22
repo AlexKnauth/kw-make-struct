@@ -1,4 +1,7 @@
 #lang racket/base
+
+(provide make/kw)
+
 (require (except-in unstable/struct make)
          racket/match
          racket/require
