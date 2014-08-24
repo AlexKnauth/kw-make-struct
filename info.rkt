@@ -2,5 +2,7 @@
 
 (define collection 'multi)
 
-(define deps '("base" "rackjure" "generic-bind" "rackunit-lib"))
+(define deps '("base"))
+
+(define build-deps '("rackjure" "generic-bind" "rackunit-lib" "scribble-lib"))
 

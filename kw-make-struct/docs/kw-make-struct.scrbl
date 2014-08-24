@@ -11,6 +11,8 @@
 
 @defmodule[kw-make-struct]
 
+source code: @url["https://github.com/AlexKnauth/kw-make-struct"]
+
 @defform*[[(make/kw struct-id field ...)
            (make/kw struct-id field-pat ...)]
           #:grammar ([field (code:line expr)
