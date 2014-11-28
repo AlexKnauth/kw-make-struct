@@ -108,7 +108,7 @@
                        [(expr ...) (reverse bkwds-exprs)])
            (syntax-property #'(constructor expr ...)
                             'disappeared-use
-                            #'S)))]
+                            (list (syntax-local-introduce #'S)))))]
       ))
   (define (parse-make/kw-match-expander stx)
     (syntax-parse stx
