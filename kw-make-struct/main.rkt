@@ -9,7 +9,6 @@
                      generic-bind/as-rkt-names
                      racket/list
                      racket/local
-                     rackjure/threading
                      syntax/parse))
 
 (module+ test
@@ -59,7 +58,7 @@
              (reverse (get-bkwds-struct-names #'S '()))))
          
          (define (accessor->field accessor)
-           (local [(define accessor-str (~> accessor syntax-e symbol->string))
+           (local [(define accessor-str (id->sym->str accessor))
                    (define field-str
                      (for/or ([name (in-list names)])
                        (define name-str (symbol->string name))
@@ -82,7 +81,7 @@
            (syntax->list #'(pos-arg ...)))
          (define kw-args
            (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
-             (define field (~> #'kw syntax-e keyword->string string->symbol))
+             (define field (kw-stx->kw->str->sym #'kw))
              (unless (member field fields)
                (raise-syntax-error #f "unexpected field keyword" stx #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
@@ -142,7 +141,7 @@
              (reverse (get-bkwds-struct-names #'S '()))))
          
          (define (accessor->field accessor)
-           (local [(define accessor-str (~> accessor syntax-e symbol->string))
+           (local [(define accessor-str (id->sym->str accessor))
                    (define field-str
                      (for/or ([name (in-list names)])
                        (define name-str (symbol->string name))
@@ -165,7 +164,7 @@
            (syntax->list #'(pos-arg ...)))
          (define kw-args
            (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
-             (define field (~> #'kw syntax-e keyword->string string->symbol))
+             (define field (kw-stx->kw->str->sym #'kw))
              (unless (member field fields)
                (raise-syntax-error #f "unexpected field keyword" stx #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
@@ -204,12 +203,18 @@
     (maybe-identifier->keyword
      (check-duplicate-identifier
       (map keyword->identifier kws))))
+  (define (id->sym->str id)
+    (symbol->string (syntax-e id)))
+  (define (kw-stx->kw->str kw-stx)
+    (keyword->string (syntax-e kw-stx)))
+  (define (kw-stx->kw->str->sym kw-stx)
+    (string->symbol (kw-stx->kw->str kw-stx)))
   (define (keyword->identifier kw)
-    (define sym (~> kw syntax-e keyword->string string->symbol))
+    (define sym (kw-stx->kw->str->sym kw))
     (datum->syntax kw sym kw kw))
   (define (maybe-identifier->keyword id)
     (if id
-        (let ([kw (~> id syntax-e symbol->string string->keyword)])
+        (let ([kw (string->keyword (id->sym->str id))])
           (datum->syntax id kw id id))
         #f))
   )
