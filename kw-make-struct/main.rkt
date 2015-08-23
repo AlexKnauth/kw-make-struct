@@ -1,6 +1,6 @@
 #lang racket/base
 
-(provide make/kw)
+(provide make/kw make/kw/derived)
 
 (require (except-in unstable/struct make)
          racket/match
@@ -16,7 +16,7 @@
            (for-syntax racket/struct-info)))
 
 (begin-for-syntax
-  (define (parse-make/kw stx)
+  (define (parse-make/kw stx #:orig-form [orig-form stx])
     (syntax-parse stx
       [(make/kw S:id
                 (~or pos-arg:expr
@@ -26,24 +26,24 @@
                     (syntax->list #'(kw ...)))
        "duplicate field keyword"
        (let ()
-         (define info (get-struct-info #'S stx))
+         (define info (get-struct-info #'S orig-form))
          (define constructor (list-ref info 1))
          (define accessors (list-ref info 3))
          (unless (identifier? #'constructor)
-           (raise-syntax-error #f "constructor not available for struct" stx #'S))
+           (raise-syntax-error #f "constructor not available for struct" orig-form #'S))
          (unless (andmap identifier? accessors)
-           (raise-syntax-error #f "incomplete info for struct type" stx #'S))
+           (raise-syntax-error #f "incomplete info for struct type" orig-form #'S))
          
          (define names
            (local [(define (get-bkwds-struct-names struct-id bkwds-names)
-                     (define info (get-struct-info struct-id stx))
+                     (define info (get-struct-info struct-id orig-form))
                      (define name (syntax-e struct-id))
                      (define super (list-ref info 5))
                      (cond [(equal? super #t) (cons name bkwds-names)]
                            [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
                            [else (display-syntax-warning
                                   #f "warning: incomplete information for struct type"
-                                  stx struct-id (list #'S))
+                                  orig-form struct-id (list #'S))
                                  (cons name bkwds-names)]))]
              (reverse (get-bkwds-struct-names #'S '()))))
          
@@ -62,7 +62,7 @@
                                              (string-append
                                               "cannot infer field name because "
                                               "accessor name doesn't match <struct-name>-<field>")
-                                             stx accessor)])))
+                                             orig-form accessor)])))
          
          (define fields
            (map accessor->field (reverse accessors)))
@@ -77,7 +77,7 @@
                                    (format "unexpected field keyword ~a\n  expected fields: ~a"
                                            (syntax-e #'kw)
                                            fields)
-                                   stx #'kw))
+                                   orig-form #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
 
          (let ([num-slots (length accessors)]
@@ -92,7 +92,7 @@
                       num-slots
                       num-provided
                       fields)
-              stx)))
+              orig-form)))
          
          (define-values (bkwds-exprs _ __)
            (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:kw-args kw-args)
@@ -105,7 +105,9 @@
                                        #:pos-args pos-args
                                        #:kw-args (hash-remove kw-args field))]
                      [(empty? pos-args) (raise-syntax-error
-                                         #f (format "missing an argument for the field: ~a" field) stx)]
+                                         #f
+                                         (format "missing an argument for the field: ~a" field)
+                                         orig-form)]
                      [else (vals #:bkwds-exprs (cons (syntax-property (first pos-args) 'field field)
                                                      bkwds-exprs)
                                  #:pos-args (rest pos-args)
@@ -117,7 +119,7 @@
                             'disappeared-use
                             (list (syntax-local-introduce #'S)))))]
       ))
-  (define (parse-make/kw-match-expander stx)
+  (define (parse-make/kw-match-expander stx #:orig-form [orig-form stx])
     (syntax-parse stx
       [(make/kw S:id
                 (~or pos-arg:expr
@@ -127,24 +129,24 @@
                     (syntax->list #'(kw ...)))
        "duplicate field keyword"
        (let ()
-         (define info (get-struct-info #'S stx))
+         (define info (get-struct-info #'S orig-form))
          (define constructor (list-ref info 1))
          (define accessors (list-ref info 3))
          (unless (identifier? #'constructor)
-           (raise-syntax-error #f "constructor not available for struct" stx #'S))
+           (raise-syntax-error #f "constructor not available for struct" orig-form #'S))
          (unless (andmap identifier? accessors)
-           (raise-syntax-error #f "incomplete info for struct type" stx #'S))
+           (raise-syntax-error #f "incomplete info for struct type" orig-form #'S))
          
          (define names
            (local [(define (get-bkwds-struct-names struct-id bkwds-names)
-                     (define info (get-struct-info struct-id stx))
+                     (define info (get-struct-info struct-id orig-form))
                      (define name (syntax-e struct-id))
                      (define super (list-ref info 5))
                      (cond [(equal? super #t) (cons name bkwds-names)]
                            [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
                            [else (display-syntax-warning
                                   #f "warning: incomplete information for struct type"
-                                  stx struct-id (list #'S))
+                                  orig-form struct-id (list #'S))
                                  (cons name bkwds-names)]))]
              (reverse (get-bkwds-struct-names #'S '()))))
          
@@ -163,7 +165,7 @@
                                              (string-append
                                               "cannot infer field name because "
                                               "accessor name doesn't match <struct-name>-<field>")
-                                             stx accessor)])))
+                                             orig-form accessor)])))
          
          (define fields
            (map accessor->field (reverse accessors)))
@@ -178,7 +180,7 @@
                                    (format "unexpected field keyword ~a\n  expected fields: ~a"
                                            (syntax-e #'kw)
                                            fields)
-                                   stx #'kw))
+                                   orig-form #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
          
          (define-values (bkwds-exprs _ __)
@@ -236,6 +238,14 @@
 (define-match-expander make/kw
   parse-make/kw-match-expander
   parse-make/kw)
+
+(define-match-expander make/kw/derived
+  (syntax-parser
+    [(make/kw/derived orig-form S:id args ...)
+     (parse-make/kw-match-expander #'(make/kw S args ...) #'orig-form)])
+  (syntax-parser
+    [(make/kw/derived orig-form S:id args ...)
+     (parse-make/kw #'(make/kw S args ...) #'orig-form)]))
 
 
 
