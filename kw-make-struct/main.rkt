@@ -33,16 +33,6 @@
            (raise-syntax-error #f "constructor not available for struct" stx #'S))
          (unless (andmap identifier? accessors)
            (raise-syntax-error #f "incomplete info for struct type" stx #'S))
-         (let ([num-slots (length accessors)]
-               [num-provided (length (syntax->list #'(pos-arg ... kw-arg ...)))])
-           (unless (= num-provided num-slots)
-             (raise-syntax-error
-              #f
-              (format "wrong number of arguments for struct ~s (expected ~s, got ~s)"
-                      (syntax-e #'S)
-                      num-slots
-                      num-provided)
-              stx)))
          
          (define names
            (local [(define (get-bkwds-struct-names struct-id bkwds-names)
@@ -85,6 +75,17 @@
              (unless (member field fields)
                (raise-syntax-error #f "unexpected field keyword" stx #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
+
+         (let ([num-slots (length accessors)]
+               [num-provided (length (syntax->list #'(pos-arg ... kw-arg ...)))])
+           (unless (= num-provided num-slots)
+             (raise-syntax-error
+              #f
+              (format "wrong number of arguments for struct ~s (expected ~s, got ~s)"
+                      (syntax-e #'S)
+                      num-slots
+                      num-provided)
+              stx)))
          
          (define-values (bkwds-exprs _ __)
            (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:kw-args kw-args)
