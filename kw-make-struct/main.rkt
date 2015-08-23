@@ -73,7 +73,11 @@
            (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
              (define field (kw-stx->kw->str->sym #'kw))
              (unless (member field fields)
-               (raise-syntax-error #f "unexpected field keyword" stx #'kw))
+               (raise-syntax-error #f
+                                   (format "unexpected field keyword ~a\n  expected fields: ~a"
+                                           (syntax-e #'kw)
+                                           fields)
+                                   stx #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
 
          (let ([num-slots (length accessors)]
@@ -81,10 +85,13 @@
            (unless (= num-provided num-slots)
              (raise-syntax-error
               #f
-              (format "wrong number of arguments for struct ~s (expected ~s, got ~s)"
+              (format (string-append
+                       "wrong number of arguments for struct ~s (expected ~s, got ~s)\n"
+                       "  expected fields: ~a")
                       (syntax-e #'S)
                       num-slots
-                      num-provided)
+                      num-provided
+                      fields)
               stx)))
          
          (define-values (bkwds-exprs _ __)
@@ -167,7 +174,11 @@
            (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
              (define field (kw-stx->kw->str->sym #'kw))
              (unless (member field fields)
-               (raise-syntax-error #f "unexpected field keyword" stx #'kw))
+               (raise-syntax-error #f
+                                   (format "unexpected field keyword ~a\n  expected fields: ~a"
+                                           (syntax-e #'kw)
+                                           fields)
+                                   stx #'kw))
              (values field (syntax-property #'kw-arg 'field field))))
          
          (define-values (bkwds-exprs _ __)
