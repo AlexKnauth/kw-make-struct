@@ -242,10 +242,10 @@
 (define-match-expander make/kw/derived
   (syntax-parser
     [(make/kw/derived orig-form S:id args ...)
-     (parse-make/kw-match-expander #'(make/kw S args ...) #'orig-form)])
+     (parse-make/kw-match-expander #'(make/kw S args ...) #:orig-form #'orig-form)])
   (syntax-parser
     [(make/kw/derived orig-form S:id args ...)
-     (parse-make/kw #'(make/kw S args ...) #'orig-form)]))
+     (parse-make/kw #'(make/kw S args ...) #:orig-form #'orig-form)]))
 
 
 
