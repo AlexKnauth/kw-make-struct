@@ -19,7 +19,7 @@ source code: @url["https://github.com/AlexKnauth/kw-make-struct"]
                             (code:line field-keyword expr)]
                      [field-pat (code:line pat)
                                 (code:line field-keyword pat)])]{
-like @racket[make] from @racketmodname[unstable/struct] except allowing keywords.  
+like @racket[make] from @racketmodname[unstable/struct], except allowing keywords.  
 
 @racket[make/kw] is also defined as a @racket[match] expander.
 
