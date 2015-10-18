@@ -1,7 +1,5 @@
-kw-make-struct
-==============
-
-[![Build Status](https://travis-ci.org/AlexKnauth/kw-make-struct.png?branch=master)](https://travis-ci.org/AlexKnauth/kw-make-struct)
+kw-make-struct [![Build Status](https://travis-ci.org/AlexKnauth/kw-make-struct.png?branch=master)](https://travis-ci.org/AlexKnauth/kw-make-struct)
+===
 
 documentation: http://pkg-build.racket-lang.org/doc/kw-make-struct/index.html
 
