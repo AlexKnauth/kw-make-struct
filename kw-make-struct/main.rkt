@@ -9,7 +9,9 @@
                      generic-bind/as-rkt-names
                      racket/list
                      racket/local
-                     syntax/parse))
+                     syntax/parse
+                     syntax/stx
+                     ))
 
 (module+ test
   (require rackunit
@@ -25,6 +27,20 @@
        #:fail-when (check-duplicate-keyword
                     (syntax->list #'(kw ...)))
        "duplicate field keyword"
+       #:with [fld ...] (stx-map keyword->identifier #'[kw ...])
+       (parse-make/fld
+        #'(make/fld S [pos-arg] ... [fld kw-arg] ...)
+        #:orig-form orig-form)]))
+
+  (define (parse-make/fld stx #:orig-form [orig-form stx])
+    (syntax-parse stx
+      [(make/fld S:id
+                 (~or [pos-arg:expr]
+                      [fld:id fld-arg:expr])
+                 ...)
+       #:fail-when (check-duplicate-identifier
+                    (syntax->list #'(fld ...)))
+       "duplicate field id"
        (let ()
          (define info (get-struct-info #'S orig-form))
          (define constructor (list-ref info 1))
@@ -69,19 +85,19 @@
          
          (define pos-args
            (syntax->list #'(pos-arg ...)))
-         (define kw-args
-           (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
-             (define field (kw-stx->kw->str->sym #'kw))
+         (define fld-args
+           (for/hash ([($stx (fld . fld-arg))  (in-list (syntax->list #'([fld . fld-arg] ...)))])
+             (define field (syntax-e #'fld))
              (unless (member field fields)
                (raise-syntax-error #f
-                                   (format "unexpected field keyword ~a\n  expected fields: ~a"
-                                           (syntax-e #'kw)
+                                   (format "unexpected field ~a\n  expected fields: ~a"
+                                           (syntax-e #'fld)
                                            fields)
-                                   orig-form #'kw))
-             (values field (syntax-property #'kw-arg 'field field))))
+                                   orig-form #'fld))
+             (values field (syntax-property #'fld-arg 'field field))))
 
          (let ([num-slots (length accessors)]
-               [num-provided (length (syntax->list #'(pos-arg ... kw-arg ...)))])
+               [num-provided (length (syntax->list #'(pos-arg ... fld-arg ...)))])
            (unless (= num-provided num-slots)
              (raise-syntax-error
               #f
@@ -95,15 +111,15 @@
               orig-form)))
          
          (define-values (bkwds-exprs _ __)
-           (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:kw-args kw-args)
-                     (values bkwds-exprs pos-args kw-args))]
-             (for/fold ([bkwds-exprs '()] [pos-args pos-args] [kw-args kw-args])
+           (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:fld-args fld-args)
+                     (values bkwds-exprs pos-args fld-args))]
+             (for/fold ([bkwds-exprs '()] [pos-args pos-args] [fld-args fld-args])
                ([field (in-list fields)])
-               (define maybe-expr (hash-ref kw-args field #f))
+               (define maybe-expr (hash-ref fld-args field #f))
                (cond [maybe-expr (vals #:bkwds-exprs (cons (syntax-property maybe-expr 'field field)
                                                            bkwds-exprs)
                                        #:pos-args pos-args
-                                       #:kw-args (hash-remove kw-args field))]
+                                       #:fld-args (hash-remove fld-args field))]
                      [(empty? pos-args) (raise-syntax-error
                                          #f
                                          (format "missing an argument for the field: ~a" field)
@@ -111,7 +127,7 @@
                      [else (vals #:bkwds-exprs (cons (syntax-property (first pos-args) 'field field)
                                                      bkwds-exprs)
                                  #:pos-args (rest pos-args)
-                                 #:kw-args kw-args)]))))
+                                 #:fld-args fld-args)]))))
          
          (with-syntax ([constructor constructor]
                        [(expr ...) (reverse bkwds-exprs)])
@@ -119,6 +135,7 @@
                             'disappeared-use
                             (list (syntax-local-introduce #'S)))))]
       ))
+
   (define (parse-make/kw-match-expander stx #:orig-form [orig-form stx])
     (syntax-parse stx
       [(make/kw S:id
@@ -128,6 +145,20 @@
        #:fail-when (check-duplicate-keyword
                     (syntax->list #'(kw ...)))
        "duplicate field keyword"
+       #:with [fld ...] (stx-map keyword->identifier #'[kw ...])
+       (parse-make/fld-match-expander
+        #'(make/fld S [pos-arg] ... [fld kw-arg] ...)
+        #:orig-form orig-form)]))
+
+  (define (parse-make/fld-match-expander stx #:orig-form [orig-form stx])
+    (syntax-parse stx
+      [(make/fld S:id
+                 (~or [pos-arg:expr]
+                      [fld:id fld-arg:expr])
+                 ...)
+       #:fail-when (check-duplicate-identifier
+                    (syntax->list #'(fld ...)))
+       "duplicate field id"
        (let ()
          (define info (get-struct-info #'S orig-form))
          (define constructor (list-ref info 1))
@@ -172,35 +203,35 @@
          
          (define pos-args
            (syntax->list #'(pos-arg ...)))
-         (define kw-args
-           (for/hash ([($stx (kw . kw-arg))  (in-list (syntax->list #'([kw . kw-arg] ...)))])
-             (define field (kw-stx->kw->str->sym #'kw))
+         (define fld-args
+           (for/hash ([($stx (fld . fld-arg))  (in-list (syntax->list #'([fld . fld-arg] ...)))])
+             (define field (syntax-e #'fld))
              (unless (member field fields)
                (raise-syntax-error #f
-                                   (format "unexpected field keyword ~a\n  expected fields: ~a"
-                                           (syntax-e #'kw)
+                                   (format "unexpected field ~a\n  expected fields: ~a"
+                                           (syntax-e #'fld)
                                            fields)
-                                   orig-form #'kw))
-             (values field (syntax-property #'kw-arg 'field field))))
+                                   orig-form #'fld))
+             (values field (syntax-property #'fld-arg 'field field))))
          
          (define-values (bkwds-exprs _ __)
-           (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:kw-args kw-args)
-                     (values bkwds-exprs pos-args kw-args))]
-             (for/fold ([bkwds-exprs '()] [pos-args pos-args] [kw-args kw-args])
+           (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:fld-args fld-args)
+                     (values bkwds-exprs pos-args fld-args))]
+             (for/fold ([bkwds-exprs '()] [pos-args pos-args] [fld-args fld-args])
                ([field (in-list fields)])
-               (define maybe-expr (hash-ref kw-args field #f))
+               (define maybe-expr (hash-ref fld-args field #f))
                (cond [maybe-expr (vals #:bkwds-exprs (cons (syntax-property maybe-expr 'field field)
                                                            bkwds-exprs)
                                        #:pos-args pos-args
-                                       #:kw-args (hash-remove kw-args field))]
+                                       #:fld-args (hash-remove fld-args field))]
                      [(empty? pos-args) (vals #:bkwds-exprs (cons (syntax-property #'_ 'field field)
                                                                   bkwds-exprs)
                                               #:pos-args '()
-                                              #:kw-args kw-args)]
+                                              #:fld-args fld-args)]
                      [else (vals #:bkwds-exprs (cons (syntax-property (first pos-args) 'field field)
                                                      bkwds-exprs)
                                  #:pos-args (rest pos-args)
-                                 #:kw-args kw-args)]))))
+                                 #:fld-args fld-args)]))))
          
          (with-syntax ([(expr ...) (reverse bkwds-exprs)])
            #'(S expr ...)))]
@@ -235,6 +266,18 @@
 
 
 
+(define-match-expander make/fld
+  parse-make/fld-match-expander
+  parse-make/fld)
+
+(define-match-expander make/fld/derived
+  (syntax-parser
+    [(make/fld/derived orig-form S:id args ...)
+     (parse-make/fld-match-expander #'(make/fld S args ...) #:orig-form #'orig-form)])
+  (syntax-parser
+    [(make/fld/derived orig-form S:id args ...)
+     (parse-make/fld #'(make/fld S args ...) #:orig-form #'orig-form)]))
+
 (define-match-expander make/kw
   parse-make/kw-match-expander
   parse-make/kw)
@@ -255,19 +298,29 @@
     (struct foo (a b c))
     (for ([x (in-list (list ;; all by-position
                             (make/kw foo 'a 'b 'c)
+                            (make/fld foo ['a] ['b] ['c])
                             ;; one kw
                             ;; #:a
                             (make/kw foo #:a 'a 'b 'c)
                             (make/kw foo 'b #:a 'a 'c)
                             (make/kw foo 'b 'c #:a 'a)
+                            (make/fld foo [a 'a] ['b] ['c])
+                            (make/fld foo ['b] [a 'a] ['c])
+                            (make/fld foo ['b] ['c] [a 'a])
                             ;; #:b
                             (make/kw foo #:b 'b 'a 'c)
                             (make/kw foo 'a #:b 'b 'c)
                             (make/kw foo 'a 'c #:b 'b)
+                            (make/fld foo [b 'b] ['a] ['c])
+                            (make/fld foo ['a] [b 'b] ['c])
+                            (make/fld foo ['a] ['c] [b 'b])
                             ;; #:c
                             (make/kw foo #:c 'c 'a 'b)
                             (make/kw foo 'a #:c 'c 'b)
                             (make/kw foo 'a 'b #:c 'c)
+                            (make/fld foo [c 'c] ['a] ['b])
+                            (make/fld foo ['a] [c 'c] ['b])
+                            (make/fld foo ['a] ['b] [c 'c])
                             ;; two kws
                             ;; #:a and #:b
                             (make/kw foo #:a 'a #:b 'b 'c)
@@ -276,6 +329,12 @@
                             (make/kw foo #:b 'b 'c #:a 'a)
                             (make/kw foo 'c #:a 'a #:b 'b)
                             (make/kw foo 'c #:b 'b #:a 'a)
+                            (make/fld foo [a 'a] [b 'b] ['c])
+                            (make/fld foo [a 'a] ['c] [b 'b])
+                            (make/fld foo [b 'b] [a 'a] ['c])
+                            (make/fld foo [b 'b] ['c] [a 'a])
+                            (make/fld foo ['c] [a 'a] [b 'b])
+                            (make/fld foo ['c] [b 'b] [a 'a])
                             ;; #:a and #:c
                             (make/kw foo #:a 'a #:c 'c 'b)
                             (make/kw foo #:a 'a 'b #:c 'c)
@@ -283,6 +342,12 @@
                             (make/kw foo #:c 'c 'b #:a 'a)
                             (make/kw foo 'b #:a 'a #:c 'c)
                             (make/kw foo 'b #:c 'c #:a 'a)
+                            (make/fld foo [a 'a] [c 'c] ['b])
+                            (make/fld foo [a 'a] ['b] [c 'c])
+                            (make/fld foo [c 'c] [a 'a] ['b])
+                            (make/fld foo [c 'c] ['b] [a 'a])
+                            (make/fld foo ['b] [a 'a] [c 'c])
+                            (make/fld foo ['b] [c 'c] [a 'a])
                             ;; #:b and #:c
                             (make/kw foo #:b 'b #:c 'c 'a)
                             (make/kw foo #:b 'b 'a #:c 'c)
@@ -290,6 +355,12 @@
                             (make/kw foo #:c 'c 'a #:b 'b)
                             (make/kw foo 'a #:b 'b #:c 'c)
                             (make/kw foo 'a #:c 'c #:b 'b)
+                            (make/fld foo [b 'b] [c 'c] ['a])
+                            (make/fld foo [b 'b] ['a] [c 'c])
+                            (make/fld foo [c 'c] [b 'b] ['a])
+                            (make/fld foo [c 'c] ['a] [b 'b])
+                            (make/fld foo ['a] [b 'b] [c 'c])
+                            (make/fld foo ['a] [c 'c] [b 'b])
                             ;; all kws
                             (make/kw foo #:a 'a #:b 'b #:c 'c)
                             (make/kw foo #:a 'a #:c 'c #:b 'b)
@@ -297,6 +368,12 @@
                             (make/kw foo #:b 'b #:c 'c #:a 'a)
                             (make/kw foo #:c 'c #:a 'a #:b 'b)
                             (make/kw foo #:c 'c #:b 'b #:a 'a)
+                            (make/fld foo [a 'a] [b 'b] [c 'c])
+                            (make/fld foo [a 'a] [c 'c] [b 'b])
+                            (make/fld foo [b 'b] [a 'a] [c 'c])
+                            (make/fld foo [b 'b] [c 'c] [a 'a])
+                            (make/fld foo [c 'c] [a 'a] [b 'b])
+                            (make/fld foo [c 'c] [b 'b] [a 'a])
                             ))])
       (check-equal? (foo-a x) 'a)
       (check-equal? (foo-b x) 'b)
@@ -304,6 +381,9 @@
       (check-match x (and (make/kw foo 'a 'b 'c)
                           (make/kw foo #:a 'a 'b 'c)
                           (make/kw foo #:a 'a #:b 'b #:c 'c)
+                          (make/fld foo ['a] ['b] ['c])
+                          (make/fld foo [a 'a] ['b] ['c])
+                          (make/fld foo [a 'a] [b 'b] [c 'c])
                           ))
       )
     #;(displayln "done testing (make/kw foo ...)"))
@@ -320,27 +400,56 @@
                    (list #'new-pair-cdr #'new-pair-car)
                    (list #f #f)
                    #t))))
-    (for ([x (in-list (list (make/kw new-pair 'car 'cdr)
+    (for ([x (in-list (list ;; all by-position
+                            (make/kw new-pair 'car 'cdr)
+                            (make/fld new-pair ['car] ['cdr])
+                            ;; one kw
+                            ;; #:car
                             (make/kw new-pair #:car 'car 'cdr)
                             (make/kw new-pair 'cdr #:car 'car)
+                            (make/fld new-pair [car 'car] ['cdr])
+                            (make/fld new-pair ['cdr] [car 'car])
+                            ;; #:cdr
                             (make/kw new-pair #:cdr 'cdr 'car)
                             (make/kw new-pair 'car #:cdr 'cdr)
+                            (make/fld new-pair [cdr 'cdr] ['car])
+                            (make/fld new-pair ['car] [cdr 'cdr])
+                            ;; all kws
                             (make/kw new-pair #:car 'car #:cdr 'cdr)
                             (make/kw new-pair #:cdr 'cdr #:car 'car)
+                            (make/fld new-pair [car 'car] [cdr 'cdr])
+                            (make/fld new-pair [cdr 'cdr] [car 'car])
                             ))])
       (check-equal? (car x) 'car)
       (check-equal? (cdr x) 'cdr)
-      (check-match x (and (make/kw new-pair 'car 'cdr)
+      (check-match x (and ;; all by-position
+                          (make/kw new-pair 'car 'cdr)
+                          (make/fld new-pair ['car] ['cdr])
+                          ;; one kw
+                          ;; #:car
                           (make/kw new-pair #:car 'car 'cdr)
                           (make/kw new-pair 'cdr #:car 'car)
+                          (make/fld new-pair [car 'car] ['cdr])
+                          (make/fld new-pair ['cdr] [car 'car])
+                          ;; #:cdr
                           (make/kw new-pair #:cdr 'cdr 'car)
                           (make/kw new-pair 'car #:cdr 'cdr)
+                          (make/fld new-pair [cdr 'cdr] ['car])
+                          (make/fld new-pair ['car] [cdr 'cdr])
+                          ;; all kws
                           (make/kw new-pair #:car 'car #:cdr 'cdr)
                           (make/kw new-pair #:cdr 'cdr #:car 'car)
+                          (make/fld new-pair [car 'car] [cdr 'cdr])
+                          (make/fld new-pair [cdr 'cdr] [car 'car])
+                          ;; with blanks
                           (make/kw new-pair)
                           (make/kw new-pair 'car)
                           (make/kw new-pair #:car 'car)
                           (make/kw new-pair #:cdr 'cdr)
+                          (make/fld new-pair)
+                          (make/fld new-pair ['car])
+                          (make/fld new-pair [car 'car])
+                          (make/fld new-pair [cdr 'cdr])
                           ))
       )
     #;(displayln "done testing (make/kw new-pair ...)")
