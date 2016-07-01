@@ -18,6 +18,54 @@
            (for-syntax racket/struct-info)))
 
 (begin-for-syntax
+  (define (struct-info-constructor info)
+    (list-ref info 1))
+  (define (struct-info-accessors-reversed info)
+    (list-ref info 3))
+  (define (struct-info-super info)
+    (list-ref info 5))
+
+  ;; get-super-struct-names : Id Stx -> (Listof Symbol)
+  ;; Looks at the struct-info of struct-id and finds the names of the super structs,
+  ;; including the original struct-id.
+  (define (get-super-struct-names struct-id orig-stx)
+    (local [(define (get-bkwds-struct-names struct-id bkwds-names)
+              (define info (get-struct-info struct-id orig-stx))
+              (define name (syntax-e struct-id))
+              (define super (struct-info-super info))
+              (cond [(equal? super #t) (cons name bkwds-names)]
+                    [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
+                    [else (display-syntax-warning
+                           #f "warning: incomplete information for struct type"
+                           orig-stx struct-id (list #'S))
+                          (cons name bkwds-names)]))]
+      (reverse (get-bkwds-struct-names struct-id '()))))
+
+  ;; accessor->field : (Listof Symbol) Stx -> (Id -> Symbol)
+  ;; Given a list of super-struct names, produces a function that converts
+  ;; accessor ids to field names.
+  (define ((accessor->field names stx) accessor)
+    (local [(define accessor-str (id->sym->str accessor))
+            (define field-str
+              (for/or ([name (in-list names)])
+                (define name-str (symbol->string name))
+                (define name.length (string-length name-str))
+                (cond [(equal? (string-append name-str "-")
+                               (substring accessor-str 0 (add1 name.length)))
+                       (substring accessor-str (add1 name.length))]
+                      [else #f])))]
+      (cond [field-str (string->symbol field-str)]
+            [else (raise-syntax-error #f
+                                      (string-append
+                                       "cannot infer field name because "
+                                       "accessor name doesn't match <struct-name>-<field>")
+                                      stx accessor)])))
+
+  ;; get-field-names : Id (Listof Id) Stx
+  (define (get-field-names struct-id accessors stx)
+    (define names (get-super-struct-names struct-id stx))
+    (map (accessor->field names stx) accessors))
+  
   (define (parse-make/kw stx #:orig-form [orig-form stx])
     (syntax-parse stx
       [(make/kw S:id
@@ -43,45 +91,15 @@
        "duplicate field id"
        (let ()
          (define info (get-struct-info #'S orig-form))
-         (define constructor (list-ref info 1))
-         (define accessors (list-ref info 3))
-         (unless (identifier? #'constructor)
+         (define constructor (struct-info-constructor info))
+         (define accessors (struct-info-accessors-reversed info))
+         (unless (identifier? constructor)
            (raise-syntax-error #f "constructor not available for struct" orig-form #'S))
          (unless (andmap identifier? accessors)
            (raise-syntax-error #f "incomplete info for struct type" orig-form #'S))
          
-         (define names
-           (local [(define (get-bkwds-struct-names struct-id bkwds-names)
-                     (define info (get-struct-info struct-id orig-form))
-                     (define name (syntax-e struct-id))
-                     (define super (list-ref info 5))
-                     (cond [(equal? super #t) (cons name bkwds-names)]
-                           [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
-                           [else (display-syntax-warning
-                                  #f "warning: incomplete information for struct type"
-                                  orig-form struct-id (list #'S))
-                                 (cons name bkwds-names)]))]
-             (reverse (get-bkwds-struct-names #'S '()))))
-         
-         (define (accessor->field accessor)
-           (local [(define accessor-str (id->sym->str accessor))
-                   (define field-str
-                     (for/or ([name (in-list names)])
-                       (define name-str (symbol->string name))
-                       (define name.length (string-length name-str))
-                       (cond [(equal? (string-append name-str "-")
-                                      (substring accessor-str 0 (add1 name.length)))
-                              (substring accessor-str (add1 name.length))]
-                             [else #f])))]
-             (cond [field-str (string->symbol field-str)]
-                   [else (raise-syntax-error #f
-                                             (string-append
-                                              "cannot infer field name because "
-                                              "accessor name doesn't match <struct-name>-<field>")
-                                             orig-form accessor)])))
-         
          (define fields
-           (map accessor->field (reverse accessors)))
+           (get-field-names #'S (reverse accessors) orig-form))
          
          (define pos-args
            (syntax->list #'(pos-arg ...)))
@@ -161,45 +179,15 @@
        "duplicate field id"
        (let ()
          (define info (get-struct-info #'S orig-form))
-         (define constructor (list-ref info 1))
-         (define accessors (list-ref info 3))
-         (unless (identifier? #'constructor)
+         (define constructor (struct-info-constructor info))
+         (define accessors (struct-info-accessors-reversed info))
+         (unless (identifier? constructor)
            (raise-syntax-error #f "constructor not available for struct" orig-form #'S))
          (unless (andmap identifier? accessors)
            (raise-syntax-error #f "incomplete info for struct type" orig-form #'S))
          
-         (define names
-           (local [(define (get-bkwds-struct-names struct-id bkwds-names)
-                     (define info (get-struct-info struct-id orig-form))
-                     (define name (syntax-e struct-id))
-                     (define super (list-ref info 5))
-                     (cond [(equal? super #t) (cons name bkwds-names)]
-                           [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
-                           [else (display-syntax-warning
-                                  #f "warning: incomplete information for struct type"
-                                  orig-form struct-id (list #'S))
-                                 (cons name bkwds-names)]))]
-             (reverse (get-bkwds-struct-names #'S '()))))
-         
-         (define (accessor->field accessor)
-           (local [(define accessor-str (id->sym->str accessor))
-                   (define field-str
-                     (for/or ([name (in-list names)])
-                       (define name-str (symbol->string name))
-                       (define name.length (string-length name-str))
-                       (cond [(equal? (string-append name-str "-")
-                                      (substring accessor-str 0 (add1 name.length)))
-                              (substring accessor-str (add1 name.length))]
-                             [else #f])))]
-             (cond [field-str (string->symbol field-str)]
-                   [else (raise-syntax-error #f
-                                             (string-append
-                                              "cannot infer field name because "
-                                              "accessor name doesn't match <struct-name>-<field>")
-                                             orig-form accessor)])))
-         
          (define fields
-           (map accessor->field (reverse accessors)))
+           (get-field-names #'S (reverse accessors) orig-form))
          
          (define pos-args
            (syntax->list #'(pos-arg ...)))
