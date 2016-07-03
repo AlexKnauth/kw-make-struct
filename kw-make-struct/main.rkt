@@ -77,13 +77,13 @@
        "duplicate field keyword"
        #:with [fld ...] (stx-map keyword->identifier #'[kw ...])
        (parse-make/fld
-        #'(make/fld S [pos-arg] ... [fld kw-arg] ...)
+        #'(make/fld S [#f pos-arg] ... [fld kw-arg] ...)
         #:orig-form orig-form)]))
 
   (define (parse-make/fld stx #:orig-form [orig-form stx])
     (syntax-parse stx
       [(make/fld S:id
-                 (~or [pos-arg:expr]
+                 (~or [#f pos-arg:expr]
                       [fld:id fld-arg:expr])
                  ...)
        #:fail-when (check-duplicate-identifier
@@ -165,13 +165,13 @@
        "duplicate field keyword"
        #:with [fld ...] (stx-map keyword->identifier #'[kw ...])
        (parse-make/fld-match-expander
-        #'(make/fld S [pos-arg] ... [fld kw-arg] ...)
+        #'(make/fld S [#f pos-arg] ... [fld kw-arg] ...)
         #:orig-form orig-form)]))
 
   (define (parse-make/fld-match-expander stx #:orig-form [orig-form stx])
     (syntax-parse stx
       [(make/fld S:id
-                 (~or [pos-arg:expr]
+                 (~or [#f pos-arg:expr]
                       [fld:id fld-arg:expr])
                  ...)
        #:fail-when (check-duplicate-identifier
@@ -286,29 +286,29 @@
     (struct foo (a b c))
     (for ([x (in-list (list ;; all by-position
                             (make/kw foo 'a 'b 'c)
-                            (make/fld foo ['a] ['b] ['c])
+                            (make/fld foo [#f 'a] [#f 'b] [#f 'c])
                             ;; one kw
                             ;; #:a
                             (make/kw foo #:a 'a 'b 'c)
                             (make/kw foo 'b #:a 'a 'c)
                             (make/kw foo 'b 'c #:a 'a)
-                            (make/fld foo [a 'a] ['b] ['c])
-                            (make/fld foo ['b] [a 'a] ['c])
-                            (make/fld foo ['b] ['c] [a 'a])
+                            (make/fld foo [a 'a] [#f 'b] [#f 'c])
+                            (make/fld foo [#f 'b] [a 'a] [#f 'c])
+                            (make/fld foo [#f 'b] [#f 'c] [a 'a])
                             ;; #:b
                             (make/kw foo #:b 'b 'a 'c)
                             (make/kw foo 'a #:b 'b 'c)
                             (make/kw foo 'a 'c #:b 'b)
-                            (make/fld foo [b 'b] ['a] ['c])
-                            (make/fld foo ['a] [b 'b] ['c])
-                            (make/fld foo ['a] ['c] [b 'b])
+                            (make/fld foo [b 'b] [#f 'a] [#f 'c])
+                            (make/fld foo [#f 'a] [b 'b] [#f 'c])
+                            (make/fld foo [#f 'a] [#f 'c] [b 'b])
                             ;; #:c
                             (make/kw foo #:c 'c 'a 'b)
                             (make/kw foo 'a #:c 'c 'b)
                             (make/kw foo 'a 'b #:c 'c)
-                            (make/fld foo [c 'c] ['a] ['b])
-                            (make/fld foo ['a] [c 'c] ['b])
-                            (make/fld foo ['a] ['b] [c 'c])
+                            (make/fld foo [c 'c] [#f 'a] [#f 'b])
+                            (make/fld foo [#f 'a] [c 'c] [#f 'b])
+                            (make/fld foo [#f 'a] [#f 'b] [c 'c])
                             ;; two kws
                             ;; #:a and #:b
                             (make/kw foo #:a 'a #:b 'b 'c)
@@ -317,12 +317,12 @@
                             (make/kw foo #:b 'b 'c #:a 'a)
                             (make/kw foo 'c #:a 'a #:b 'b)
                             (make/kw foo 'c #:b 'b #:a 'a)
-                            (make/fld foo [a 'a] [b 'b] ['c])
-                            (make/fld foo [a 'a] ['c] [b 'b])
-                            (make/fld foo [b 'b] [a 'a] ['c])
-                            (make/fld foo [b 'b] ['c] [a 'a])
-                            (make/fld foo ['c] [a 'a] [b 'b])
-                            (make/fld foo ['c] [b 'b] [a 'a])
+                            (make/fld foo [a 'a] [b 'b] [#f 'c])
+                            (make/fld foo [a 'a] [#f 'c] [b 'b])
+                            (make/fld foo [b 'b] [a 'a] [#f 'c])
+                            (make/fld foo [b 'b] [#f 'c] [a 'a])
+                            (make/fld foo [#f 'c] [a 'a] [b 'b])
+                            (make/fld foo [#f 'c] [b 'b] [a 'a])
                             ;; #:a and #:c
                             (make/kw foo #:a 'a #:c 'c 'b)
                             (make/kw foo #:a 'a 'b #:c 'c)
@@ -330,12 +330,12 @@
                             (make/kw foo #:c 'c 'b #:a 'a)
                             (make/kw foo 'b #:a 'a #:c 'c)
                             (make/kw foo 'b #:c 'c #:a 'a)
-                            (make/fld foo [a 'a] [c 'c] ['b])
-                            (make/fld foo [a 'a] ['b] [c 'c])
-                            (make/fld foo [c 'c] [a 'a] ['b])
-                            (make/fld foo [c 'c] ['b] [a 'a])
-                            (make/fld foo ['b] [a 'a] [c 'c])
-                            (make/fld foo ['b] [c 'c] [a 'a])
+                            (make/fld foo [a 'a] [c 'c] [#f 'b])
+                            (make/fld foo [a 'a] [#f 'b] [c 'c])
+                            (make/fld foo [c 'c] [a 'a] [#f 'b])
+                            (make/fld foo [c 'c] [#f 'b] [a 'a])
+                            (make/fld foo [#f 'b] [a 'a] [c 'c])
+                            (make/fld foo [#f 'b] [c 'c] [a 'a])
                             ;; #:b and #:c
                             (make/kw foo #:b 'b #:c 'c 'a)
                             (make/kw foo #:b 'b 'a #:c 'c)
@@ -343,12 +343,12 @@
                             (make/kw foo #:c 'c 'a #:b 'b)
                             (make/kw foo 'a #:b 'b #:c 'c)
                             (make/kw foo 'a #:c 'c #:b 'b)
-                            (make/fld foo [b 'b] [c 'c] ['a])
-                            (make/fld foo [b 'b] ['a] [c 'c])
-                            (make/fld foo [c 'c] [b 'b] ['a])
-                            (make/fld foo [c 'c] ['a] [b 'b])
-                            (make/fld foo ['a] [b 'b] [c 'c])
-                            (make/fld foo ['a] [c 'c] [b 'b])
+                            (make/fld foo [b 'b] [c 'c] [#f 'a])
+                            (make/fld foo [b 'b] [#f 'a] [c 'c])
+                            (make/fld foo [c 'c] [b 'b] [#f 'a])
+                            (make/fld foo [c 'c] [#f 'a] [b 'b])
+                            (make/fld foo [#f 'a] [b 'b] [c 'c])
+                            (make/fld foo [#f 'a] [c 'c] [b 'b])
                             ;; all kws
                             (make/kw foo #:a 'a #:b 'b #:c 'c)
                             (make/kw foo #:a 'a #:c 'c #:b 'b)
@@ -369,8 +369,8 @@
       (check-match x (and (make/kw foo 'a 'b 'c)
                           (make/kw foo #:a 'a 'b 'c)
                           (make/kw foo #:a 'a #:b 'b #:c 'c)
-                          (make/fld foo ['a] ['b] ['c])
-                          (make/fld foo [a 'a] ['b] ['c])
+                          (make/fld foo [#f 'a] [#f 'b] [#f 'c])
+                          (make/fld foo [a 'a] [#f 'b] [#f 'c])
                           (make/fld foo [a 'a] [b 'b] [c 'c])
                           ))
       )
@@ -390,18 +390,18 @@
                    #t))))
     (for ([x (in-list (list ;; all by-position
                             (make/kw new-pair 'car 'cdr)
-                            (make/fld new-pair ['car] ['cdr])
+                            (make/fld new-pair [#f 'car] [#f 'cdr])
                             ;; one kw
                             ;; #:car
                             (make/kw new-pair #:car 'car 'cdr)
                             (make/kw new-pair 'cdr #:car 'car)
-                            (make/fld new-pair [car 'car] ['cdr])
-                            (make/fld new-pair ['cdr] [car 'car])
+                            (make/fld new-pair [car 'car] [#f 'cdr])
+                            (make/fld new-pair [#f 'cdr] [car 'car])
                             ;; #:cdr
                             (make/kw new-pair #:cdr 'cdr 'car)
                             (make/kw new-pair 'car #:cdr 'cdr)
-                            (make/fld new-pair [cdr 'cdr] ['car])
-                            (make/fld new-pair ['car] [cdr 'cdr])
+                            (make/fld new-pair [cdr 'cdr] [#f 'car])
+                            (make/fld new-pair [#f 'car] [cdr 'cdr])
                             ;; all kws
                             (make/kw new-pair #:car 'car #:cdr 'cdr)
                             (make/kw new-pair #:cdr 'cdr #:car 'car)
@@ -412,18 +412,18 @@
       (check-equal? (cdr x) 'cdr)
       (check-match x (and ;; all by-position
                           (make/kw new-pair 'car 'cdr)
-                          (make/fld new-pair ['car] ['cdr])
+                          (make/fld new-pair [#f 'car] [#f 'cdr])
                           ;; one kw
                           ;; #:car
                           (make/kw new-pair #:car 'car 'cdr)
                           (make/kw new-pair 'cdr #:car 'car)
-                          (make/fld new-pair [car 'car] ['cdr])
-                          (make/fld new-pair ['cdr] [car 'car])
+                          (make/fld new-pair [car 'car] [#f 'cdr])
+                          (make/fld new-pair [#f 'cdr] [car 'car])
                           ;; #:cdr
                           (make/kw new-pair #:cdr 'cdr 'car)
                           (make/kw new-pair 'car #:cdr 'cdr)
-                          (make/fld new-pair [cdr 'cdr] ['car])
-                          (make/fld new-pair ['car] [cdr 'cdr])
+                          (make/fld new-pair [cdr 'cdr] [#f 'car])
+                          (make/fld new-pair [#f 'car] [cdr 'cdr])
                           ;; all kws
                           (make/kw new-pair #:car 'car #:cdr 'cdr)
                           (make/kw new-pair #:cdr 'cdr #:car 'car)
@@ -435,7 +435,7 @@
                           (make/kw new-pair #:car 'car)
                           (make/kw new-pair #:cdr 'cdr)
                           (make/fld new-pair)
-                          (make/fld new-pair ['car])
+                          (make/fld new-pair [#f 'car])
                           (make/fld new-pair [car 'car])
                           (make/fld new-pair [cdr 'cdr])
                           ))
