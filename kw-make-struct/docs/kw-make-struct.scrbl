@@ -35,3 +35,20 @@ like @racket[make] from @racketmodname[unstable/struct], except allowing keyword
      (list a b c)])
 ]}
 
+@defform*[[(make/fld struct-id [field-id expr] ...)
+           (make/fld struct-id [field-id pat] ...)]]{
+Creates an instance of @racket[struct-id], where @racket[[field-id expr]]
+means that the @racket[field-id] field will be the value of @racket[expr].
+
+@racket[make/fld] is also defined as a @racket[match] expander.
+
+@examples[
+  (require kw-make-struct racket/match)
+  (struct foo (a b c) #:transparent)
+  (make/fld foo [a 'a] [b 'b] [c 'c])
+  (make/fld foo [c 'c] [a 'a] [b 'b])
+  (match (foo 'a 'b 'c)
+    [(make/fld foo [a a] [b b] [c c])
+     (list a b c)])
+]}
+

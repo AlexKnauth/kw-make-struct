@@ -1,6 +1,6 @@
 #lang racket/base
 
-(provide make/kw make/kw/derived)
+(provide make/kw make/kw/derived make/fld make/fld/derived)
 
 (require (except-in unstable/struct make)
          racket/match
