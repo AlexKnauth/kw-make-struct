@@ -4,11 +4,10 @@
 
 (require (except-in unstable/struct make)
          racket/match
-         racket/require
-         (for-syntax (subtract-in racket/base generic-bind/as-rkt-names)
-                     generic-bind/as-rkt-names
+         (for-syntax racket/base
                      racket/list
                      racket/local
+                     racket/match
                      syntax/parse
                      syntax/stx
                      ))
@@ -104,15 +103,16 @@
          (define pos-args
            (syntax->list #'(pos-arg ...)))
          (define fld-args
-           (for/hash ([($stx (fld . fld-arg))  (in-list (syntax->list #'([fld . fld-arg] ...)))])
-             (define field (syntax-e #'fld))
+           (for/hash ([fld+arg (in-list (syntax->list #'([fld . fld-arg] ...)))])
+             (match-define (cons fld fld-arg) (syntax-e fld+arg))
+             (define field (syntax-e fld))
              (unless (member field fields)
                (raise-syntax-error #f
                                    (format "unexpected field ~a\n  expected fields: ~a"
-                                           (syntax-e #'fld)
+                                           field
                                            fields)
-                                   orig-form #'fld))
-             (values field (syntax-property #'fld-arg 'field field))))
+                                   orig-form fld))
+             (values field (syntax-property fld-arg 'field field))))
 
          (let ([num-slots (length accessors)]
                [num-provided (length (syntax->list #'(pos-arg ... fld-arg ...)))])
@@ -192,15 +192,16 @@
          (define pos-args
            (syntax->list #'(pos-arg ...)))
          (define fld-args
-           (for/hash ([($stx (fld . fld-arg))  (in-list (syntax->list #'([fld . fld-arg] ...)))])
-             (define field (syntax-e #'fld))
+           (for/hash ([fld+arg  (in-list (syntax->list #'([fld . fld-arg] ...)))])
+             (match-define (cons fld fld-arg) (syntax-e fld+arg))
+             (define field (syntax-e fld))
              (unless (member field fields)
                (raise-syntax-error #f
                                    (format "unexpected field ~a\n  expected fields: ~a"
-                                           (syntax-e #'fld)
+                                           field
                                            fields)
-                                   orig-form #'fld))
-             (values field (syntax-property #'fld-arg 'field field))))
+                                   orig-form fld))
+             (values field (syntax-property fld-arg 'field field))))
          
          (define-values (bkwds-exprs _ __)
            (local [(define (vals #:bkwds-exprs bkwds-exprs #:pos-args pos-args #:fld-args fld-args)
