@@ -6,6 +6,7 @@ env:
   global:
    - RACKET_DIR=~/racket
   matrix:
+   - RACKET_VERSION=6.0
    - RACKET_VERSION=6.0.1
    - RACKET_VERSION=6.1
    - RACKET_VERSION=6.1.1
@@ -14,6 +15,7 @@ env:
    - RACKET_VERSION=6.3
    - RACKET_VERSION=6.4
    - RACKET_VERSION=6.5
+   - RACKET_VERSION=6.6
    - RACKET_VERSION=HEAD
 
 matrix:
@@ -33,6 +35,6 @@ before_script:
 
 script:
  - raco pkg install --deps search-auto --link kw-make-struct
- - raco test -x -p kw-make-struct
+ - raco test -p kw-make-struct
 
 after_script:
