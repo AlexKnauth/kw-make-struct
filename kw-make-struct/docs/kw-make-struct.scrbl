@@ -21,7 +21,7 @@ source code: @url["https://github.com/AlexKnauth/kw-make-struct"]
                             (code:line field-keyword expr)]
                      [field-pat (code:line pat)
                                 (code:line field-keyword pat)])]{
-Like @hyperlink[make-from-unstable/struct]{@racket[make] from @racketmodname[unstable/struct]},
+Like @hyperlink[make-from-unstable/struct]{@racket[make] from @racketmodfont{unstable/struct}},
 except allowing keywords.  
 
 @racket[make/kw] is also defined as a @racket[match] expander.
