@@ -2,14 +2,14 @@
 
 (provide make/kw make/kw/derived make/fld make/fld/derived)
 
-(require (except-in unstable/struct make)
-         racket/match
+(require racket/match
          (for-syntax racket/base
                      racket/list
                      racket/local
                      racket/match
                      syntax/parse
                      syntax/stx
+                     syntax/parse/class/struct-id
                      ))
 
 (module+ test
@@ -17,28 +17,22 @@
            (for-syntax racket/struct-info)))
 
 (begin-for-syntax
-  (define (struct-info-constructor info)
-    (list-ref info 1))
-  (define (struct-info-accessors-reversed info)
-    (list-ref info 3))
-  (define (struct-info-super info)
-    (list-ref info 5))
-
   ;; get-super-struct-names : Id Stx -> (Listof Symbol)
   ;; Looks at the struct-info of struct-id and finds the names of the super structs,
   ;; including the original struct-id.
-  (define (get-super-struct-names struct-id orig-stx)
-    (local [(define (get-bkwds-struct-names struct-id bkwds-names)
-              (define info (get-struct-info struct-id orig-stx))
-              (define name (syntax-e struct-id))
-              (define super (struct-info-super info))
-              (cond [(equal? super #t) (cons name bkwds-names)]
-                    [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
-                    [else (display-syntax-warning
-                           #f "warning: incomplete information for struct type"
-                           orig-stx struct-id (list #'S))
-                          (cons name bkwds-names)]))]
-      (reverse (get-bkwds-struct-names struct-id '()))))
+  (define (get-super-struct-names S orig-stx)
+    (local [(define (get-bkwds-struct-names s bkwds-names)
+              (syntax-parse s
+                [s:struct-id
+                 (define name (syntax-e #'s))
+                 (define super (attribute s.supertype-id))
+                 (cond [(equal? super #t) (cons name bkwds-names)]
+                       [(identifier? super) (get-bkwds-struct-names super (cons name bkwds-names))]
+                       [else (display-syntax-warning
+                              #f "warning: incomplete information for struct type"
+                              orig-stx #'s (list S))
+                             (cons name bkwds-names)])]))]
+      (reverse (get-bkwds-struct-names S '()))))
 
   ;; accessor->field : (Listof Symbol) Stx -> (Id -> Symbol)
   ;; Given a list of super-struct names, produces a function that converts
@@ -81,7 +75,7 @@
 
   (define (parse-make/fld stx #:orig-form [orig-form stx])
     (syntax-parse stx
-      [(make/fld S:id
+      [(make/fld S:struct-id
                  (~or [#f pos-arg:expr]
                       [fld:id fld-arg:expr])
                  ...)
@@ -89,16 +83,15 @@
                     (syntax->list #'(fld ...)))
        "duplicate field id"
        (let ()
-         (define info (get-struct-info #'S orig-form))
-         (define constructor (struct-info-constructor info))
-         (define accessors (struct-info-accessors-reversed info))
+         (define constructor (attribute S.constructor-id))
+         (define accessors (attribute S.accessor-id))
          (unless (identifier? constructor)
            (raise-syntax-error #f "constructor not available for struct" orig-form #'S))
-         (unless (andmap identifier? accessors)
+         (unless (attribute S.all-fields-visible?)
            (raise-syntax-error #f "incomplete info for struct type" orig-form #'S))
          
          (define fields
-           (get-field-names #'S (reverse accessors) orig-form))
+           (get-field-names #'S accessors orig-form))
          
          (define pos-args
            (syntax->list #'(pos-arg ...)))
@@ -114,7 +107,7 @@
                                    orig-form fld))
              (values field (syntax-property fld-arg 'field field))))
 
-         (let ([num-slots (length accessors)]
+         (let ([num-slots (attribute S.num-fields)]
                [num-provided (length (syntax->list #'(pos-arg ... fld-arg ...)))])
            (unless (= num-provided num-slots)
              (raise-syntax-error
@@ -170,7 +163,7 @@
 
   (define (parse-make/fld-match-expander stx #:orig-form [orig-form stx])
     (syntax-parse stx
-      [(make/fld S:id
+      [(make/fld S:struct-id
                  (~or [#f pos-arg:expr]
                       [fld:id fld-arg:expr])
                  ...)
@@ -178,16 +171,15 @@
                     (syntax->list #'(fld ...)))
        "duplicate field id"
        (let ()
-         (define info (get-struct-info #'S orig-form))
-         (define constructor (struct-info-constructor info))
-         (define accessors (struct-info-accessors-reversed info))
+         (define constructor (attribute S.constructor-id))
+         (define accessors (attribute S.accessor-id))
          (unless (identifier? constructor)
            (raise-syntax-error #f "constructor not available for struct" orig-form #'S))
-         (unless (andmap identifier? accessors)
+         (unless (attribute S.all-fields-visible?)
            (raise-syntax-error #f "incomplete info for struct type" orig-form #'S))
          
          (define fields
-           (get-field-names #'S (reverse accessors) orig-form))
+           (get-field-names #'S accessors orig-form))
          
          (define pos-args
            (syntax->list #'(pos-arg ...)))
